@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 use url::Url;
 
-use vim_fmi_cli::{Controller, Vim};
+use vim_fmi_cli::{Controller, Vim, Keylog};
 
 #[derive(Debug, Parser)]
 #[command(name = "vim-fmi")]
@@ -42,12 +42,14 @@ fn main() {
             let vimrc_path = controller.vimrc_path();
             let vim = Vim::new(input_path, log_path, vimrc_path);
 
-            let (output, log) = vim.run().unwrap();
+            let (output, log_bytes) = vim.run().unwrap();
+            let keylog = Keylog::new(log_bytes);
+            let script: String = keylog.into_iter().collect();
 
             if output.trim() == task.output {
-                println!("Okay! {:?}", String::from_utf8_lossy(&log));
+                println!("Okay! {}", script);
             } else {
-                println!("Wrong!");
+                println!("Wrong! {}", script);
             }
         },
         Commands::Version => {
