@@ -38,13 +38,14 @@ fn main() {
             let task = controller.download().unwrap();
 
             let input_path = controller.create_file("input", &task.input).unwrap();
-            // let output_path = controller.create(&task.output).unwrap();
-            let vim = Vim::new(input_path);
+            let log_path = controller.create_file("log", "").unwrap();
+            let vimrc_path = controller.vimrc_path();
+            let vim = Vim::new(input_path, log_path, vimrc_path);
 
-            let contents = vim.run().unwrap();
+            let (output, log) = vim.run().unwrap();
 
-            if contents.trim() == task.output {
-                println!("Okay!");
+            if output.trim() == task.output {
+                println!("Okay! {:?}", String::from_utf8_lossy(&log));
             } else {
                 println!("Wrong!");
             }
