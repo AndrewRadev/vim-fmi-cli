@@ -1,4 +1,7 @@
 use clap::{Parser, Subcommand};
+use url::Url;
+
+use vim_fmi_cli::{Controller, Vim};
 
 #[derive(Debug, Parser)]
 #[command(name = "vim-fmi")]
@@ -26,11 +29,25 @@ enum Commands {
 
 fn main() {
     let args = Cli::parse();
+    let host = Url::parse("http://localhost:3000").unwrap();
 
     match args.command {
         Commands::Setup => println!("setup"),
         Commands::Put { task_id } => {
-            println!("{}", task_id)
+            let controller = Controller::new(host.clone(), &task_id).unwrap();
+            let task = controller.download().unwrap();
+
+            let input_path = controller.create_file("input", &task.input).unwrap();
+            // let output_path = controller.create(&task.output).unwrap();
+            let vim = Vim::new(input_path);
+
+            let contents = vim.run().unwrap();
+
+            if contents.trim() == task.output {
+                println!("Okay!");
+            } else {
+                println!("Wrong!");
+            }
         },
         Commands::Version => {
             println!(::clap::crate_version!());
