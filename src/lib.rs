@@ -8,6 +8,7 @@ use tempfile::TempDir;
 use serde::Deserialize;
 use once_cell::sync::OnceCell;
 use base64::{Engine as _};
+use mac_address::get_mac_address;
 
 const VIMRC_CONTENTS: &'static str = include_str!("vimrc");
 
@@ -43,10 +44,25 @@ impl Controller {
     pub fn upload(&self, bytes: Vec<u8>) -> ::anyhow::Result<bool> {
         let endpoint = self.host.join("/entry.json")?;
         let client = reqwest::blocking::Client::new();
+
+        let mac_address = match get_mac_address() {
+            Ok(Some(address)) => address.to_string(),
+            Ok(None) => String::new(),
+            Err(e) => format!("{}", e),
+        };
+
+        let meta = serde_json::json!({
+            "mac_address": mac_address,
+            "username": ::whoami::username(),
+            "devicename": ::whoami::devicename(),
+            "platform": ::whoami::platform().to_string(),
+        });
+
         let body = serde_urlencoded::to_string(&[
             ("entry", ::base64::engine::general_purpose::STANDARD.encode(&bytes)),
             ("challenge_id", self.task_id.clone()),
             ("apikey", String::from("TODO")),
+            ("meta", meta.to_string()),
         ])?;
         let response = client.post(endpoint).body(body).send()?;
 
