@@ -43,11 +43,12 @@ fn main() {
             let vim = Vim::new(input_path, log_path, vimrc_path);
 
             let (output, log_bytes) = vim.run().unwrap();
-            let keylog = Keylog::new(log_bytes);
+            let keylog = Keylog::new(&log_bytes);
             let script: String = keylog.into_iter().collect();
 
             if output.trim() == task.output {
-                println!("Okay! {}", script);
+                println!("Okay! Your keys were: {}", script);
+                controller.upload(log_bytes).unwrap();
             } else {
                 println!("Wrong! {}", script);
             }

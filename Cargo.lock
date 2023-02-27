@@ -777,11 +777,13 @@ name = "vim-fmi-cli"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "base64",
  "clap",
  "once_cell",
  "reqwest",
  "serde",
  "serde_json",
+ "serde_urlencoded",
  "tempfile",
  "url",
 ]

@@ -7,6 +7,7 @@ use url::Url;
 use tempfile::TempDir;
 use serde::Deserialize;
 use once_cell::sync::OnceCell;
+use base64::{Engine as _};
 
 const VIMRC_CONTENTS: &'static str = include_str!("vimrc");
 
@@ -37,6 +38,23 @@ impl Controller {
         let exercise = response.json()?;
 
         Ok(exercise)
+    }
+
+    pub fn upload(&self, bytes: Vec<u8>) -> ::anyhow::Result<bool> {
+        let endpoint = self.host.join("/entry.json")?;
+        let client = reqwest::blocking::Client::new();
+        let body = serde_urlencoded::to_string(&[
+            ("entry", ::base64::engine::general_purpose::STANDARD.encode(&bytes)),
+            ("challenge_id", self.task_id.clone()),
+            ("apikey", String::from("TODO")),
+        ])?;
+        let response = client.post(endpoint).body(body).send()?;
+
+        if response.status().is_success() {
+            Ok(true)
+        } else {
+            Ok(false)
+        }
     }
 
     pub fn create_file(&self, name: &str, contents: &str) -> ::anyhow::Result<PathBuf> {
@@ -94,7 +112,8 @@ pub struct Keylog {
 }
 
 impl Keylog {
-    pub fn new(bytes: Vec<u8>) -> Self {
+    pub fn new(bytes: &[u8]) -> Self {
+        let bytes = bytes.to_owned();
         Keylog { bytes }
     }
 
