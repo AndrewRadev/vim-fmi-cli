@@ -13,27 +13,43 @@ use mac_address::get_mac_address;
 const VIMRC_CONTENTS: &'static str = include_str!("vimrc");
 
 pub struct Controller {
-    task_id: String,
     host: Url,
     tempdir: TempDir,
 }
 
 impl Controller {
-    pub fn new(host: Url, task_id: &str) -> ::anyhow::Result<Self> {
-        let task_id = task_id.to_owned();
+    pub fn new(host: Url) -> ::anyhow::Result<Self> {
         let tempdir = TempDir::new()?;
 
         fs::write(tempdir.path().join("vimrc"), VIMRC_CONTENTS)?;
 
-        Ok(Self { task_id, host, tempdir })
+        Ok(Self { host, tempdir })
     }
 
     pub fn vimrc_path(&self) -> PathBuf {
         self.tempdir.path().join("vimrc").to_owned()
     }
 
-    pub fn download(&self) -> ::anyhow::Result<Task> {
-        let path = format!("/tasks/{}.json", self.task_id);
+    pub fn setup_user(&self, user_token: &str) -> ::anyhow::Result<User> {
+        let endpoint = self.host.join("/user_tokens/activate.json")?;
+        let client = reqwest::blocking::Client::new();
+        let meta = get_meta();
+
+        let body = serde_urlencoded::to_string(&[
+            ("token", user_token.to_owned()),
+            ("meta", meta.to_string()),
+        ])?;
+
+        let user = client.post(endpoint).body(body).send()?.json()?;
+
+        // TODO persist user
+        println!("{:?}", user);
+
+        Ok(user)
+    }
+
+    pub fn download_task(&self, task_id: &str) -> ::anyhow::Result<Task> {
+        let path = format!("/tasks/{}.json", task_id);
         let endpoint = self.host.join(&path)?;
         let response = reqwest::blocking::get(endpoint)?;
         let exercise = response.json()?;
@@ -41,27 +57,15 @@ impl Controller {
         Ok(exercise)
     }
 
-    pub fn upload(&self, bytes: Vec<u8>) -> ::anyhow::Result<bool> {
+    pub fn upload(&self, task_id: &str, bytes: Vec<u8>) -> ::anyhow::Result<bool> {
         let endpoint = self.host.join("/entry.json")?;
         let client = reqwest::blocking::Client::new();
-
-        let mac_address = match get_mac_address() {
-            Ok(Some(address)) => address.to_string(),
-            Ok(None) => String::new(),
-            Err(e) => format!("{}", e),
-        };
-
-        let meta = serde_json::json!({
-            "mac_address": mac_address,
-            "username": ::whoami::username(),
-            "devicename": ::whoami::devicename(),
-            "platform": ::whoami::platform().to_string(),
-        });
+        let meta = get_meta();
 
         let body = serde_urlencoded::to_string(&[
             ("entry", ::base64::engine::general_purpose::STANDARD.encode(&bytes)),
-            ("challenge_id", self.task_id.clone()),
-            ("apikey", String::from("TODO")),
+            ("challenge_id", task_id.to_owned()),
+            ("user_token", String::from("TODO")),
             ("meta", meta.to_string()),
         ])?;
         let response = client.post(endpoint).body(body).send()?;
@@ -80,11 +84,32 @@ impl Controller {
     }
 }
 
+fn get_meta() -> serde_json::Value {
+    let mac_address = match get_mac_address() {
+        Ok(Some(address)) => address.to_string(),
+        Ok(None) => String::new(),
+        Err(e) => format!("{}", e),
+    };
+
+    serde_json::json!({
+        "mac_address": mac_address,
+        "username": ::whoami::username(),
+        "devicename": ::whoami::devicename(),
+        "platform": ::whoami::platform().to_string(),
+    })
+}
+
 #[derive(Debug, Deserialize)]
 pub struct Task {
     pub input: String,
     pub output: String,
     pub version: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct User {
+    pub id: u32,
+    pub faculty_number: String,
 }
 
 pub struct Vim {

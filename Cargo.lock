@@ -631,6 +631,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "similar"
+version = "2.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "420acb44afdae038210c99e69aae24109f32f15500aa708e81d46c9f29d55fcf"
+
+[[package]]
 name = "slab"
 version = "0.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -805,7 +811,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
 
 [[package]]
-name = "vim-fmi-cli"
+name = "vim-fmi"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -817,6 +823,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded",
+ "similar",
  "tempfile",
  "url",
  "whoami",

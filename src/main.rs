@@ -1,7 +1,10 @@
+use std::process::ExitCode;
+
 use clap::{Parser, Subcommand};
 use url::Url;
+use similar::{TextDiff, ChangeTag};
 
-use vim_fmi_cli::{Controller, Vim, Keylog};
+use vim_fmi::{Controller, Vim, Keylog};
 
 #[derive(Debug, Parser)]
 #[command(name = "vim-fmi")]
@@ -14,7 +17,11 @@ struct Cli {
 #[derive(Debug, Subcommand)]
 enum Commands {
     /// Инициализира потребителя, който ще праща решения
-    Setup,
+    #[command(arg_required_else_help = true)]
+    Setup {
+        /// Токен, генериран в сайта (https://vim-fmi.bg/user_tokens)
+        user_token: String,
+    },
 
     /// Стартира упражнение с подадения идентификатор
     #[command(arg_required_else_help = true)]
@@ -27,30 +34,52 @@ enum Commands {
     Version,
 }
 
-fn main() {
+fn main() -> ExitCode {
     let args = Cli::parse();
-    let host = Url::parse("http://localhost:3000").unwrap();
 
-    match args.command {
-        Commands::Setup => println!("setup"),
+    if let Err(e) = run(&args) {
+        eprintln!("Error: {}", e);
+        return ExitCode::FAILURE;
+    }
+
+    ExitCode::SUCCESS
+}
+
+fn run(args: &Cli) -> anyhow::Result<()> {
+    let host = Url::parse("http://localhost:3000")?;
+
+    match &args.command {
+        Commands::Setup { user_token } => {
+            let controller = Controller::new(host.clone())?;
+            let user_data = controller.setup_user(&user_token)?;
+
+            // TODO save user data
+
+            println!("Токена ти е активиран, вече можеш да пускаш решения");
+        },
         Commands::Put { task_id } => {
-            let controller = Controller::new(host.clone(), &task_id).unwrap();
-            let task = controller.download().unwrap();
+            let controller = Controller::new(host.clone())?;
+            let task = controller.download_task(&task_id)?;
 
-            let input_path = controller.create_file("input", &task.input).unwrap();
-            let log_path = controller.create_file("log", "").unwrap();
+            let input_path = controller.create_file("input", &task.input)?;
+            let log_path = controller.create_file("log", "")?;
             let vimrc_path = controller.vimrc_path();
             let vim = Vim::new(input_path, log_path, vimrc_path);
 
-            let (output, log_bytes) = vim.run().unwrap();
+            let (output, log_bytes) = vim.run()?;
             let keylog = Keylog::new(&log_bytes);
             let script: String = keylog.into_iter().collect();
+            let trimmed_output = output.trim();
 
-            if output.trim() == task.output {
-                println!("Okay! Your keys were: {}", script);
-                controller.upload(log_bytes).unwrap();
+            if trimmed_output == task.output {
+                controller.upload(&task_id, log_bytes)?;
+                println!("Супер, решението е качено. Клавишите ти бяха:\n{}", script);
             } else {
-                println!("Wrong! {}", script);
+                println!("Не се получи, клавишите ти бяха:\n{}", script);
+                println!();
+                println!("Ето ти разликата между твоя опит и очаквания:");
+                println!();
+                print_diff(&task.output, trimmed_output);
             }
         },
         Commands::Version => {
@@ -58,5 +87,18 @@ fn main() {
         },
     }
 
-    // Continued program logic goes here...
+    Ok(())
+}
+
+fn print_diff(input: &str, output: &str) {
+    let diff = TextDiff::from_lines(input, output);
+
+    for change in diff.iter_all_changes() {
+        let sign = match change.tag() {
+            ChangeTag::Delete => "-",
+            ChangeTag::Insert => "+",
+            ChangeTag::Equal => " ",
+        };
+        print!("{}{}", sign, change);
+    }
 }
