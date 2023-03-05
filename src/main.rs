@@ -1,10 +1,11 @@
-use std::process::ExitCode;
+use std::process::{self, ExitCode};
 
 use clap::{Parser, Subcommand};
 use url::Url;
 use similar::{TextDiff, ChangeTag};
 
-use vim_fmi::{Controller, Vim, Keylog};
+use vim_fmi::{Controller, read_user};
+use vim_fmi::vim::{Vim, Keylog};
 
 #[derive(Debug, Parser)]
 #[command(name = "vim-fmi")]
@@ -51,13 +52,20 @@ fn run(args: &Cli) -> anyhow::Result<()> {
     match &args.command {
         Commands::Setup { user_token } => {
             let controller = Controller::new(host.clone())?;
-            let user_data = controller.setup_user(&user_token)?;
-
-            // TODO save user data
+            let _ = controller.setup_user(&user_token)?;
 
             println!("Токена ти е активиран, вече можеш да пускаш решения");
         },
         Commands::Put { task_id } => {
+            if read_user()?.is_none() {
+                eprintln!("Не си се активирал на този компютър.");
+                eprintln!("Иди в сайта (https://vim-fmi.bg/user_tokens), създай си token и извикай:");
+                eprintln!();
+                eprintln!("  vim-fmi setup <token>");
+                eprintln!();
+                process::exit(1);
+            }
+
             let controller = Controller::new(host.clone())?;
             let task = controller.download_task(&task_id)?;
 
