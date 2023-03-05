@@ -20,10 +20,12 @@ impl Vim {
 
     pub fn run(&self) -> ::anyhow::Result<(String, Vec<u8>)> {
         let executable =
-            if which("mvim").is_ok() {
-                "mvim"
+            if let Ok(custom_value) = std::env::var("VIM") {
+                custom_value
+            } else if which("mvim").is_ok() {
+                String::from("mvim")
             } else if which("gvim").is_ok() {
-                "gvim"
+                String::from("gvim")
             } else {
                 return Err(anyhow!("Не беше намерен нито `mvim`, нито `gvim`, вижте дали програмата е в $PATH"));
             };
