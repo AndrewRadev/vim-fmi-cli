@@ -47,7 +47,12 @@ fn main() -> ExitCode {
 }
 
 fn run(args: &Cli) -> anyhow::Result<()> {
-    let host = Url::parse("http://localhost:3000")?;
+    let host =
+        if cfg!(debug_assertions) {
+            Url::parse("http://localhost:3000")?
+        } else {
+            Url::parse("https://vim-fmi.bg")?
+        };
 
     match &args.command {
         Commands::Setup { user_token } => {
