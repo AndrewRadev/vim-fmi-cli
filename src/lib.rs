@@ -8,7 +8,6 @@ use url::Url;
 use tempfile::TempDir;
 use serde::{Serialize, Deserialize};
 use base64::{Engine as _};
-use mac_address::get_mac_address;
 use directories::ProjectDirs;
 
 const VIMRC_CONTENTS: &'static str = include_str!("vimrc");
@@ -86,14 +85,7 @@ impl Controller {
 }
 
 fn get_meta() -> serde_json::Value {
-    let mac_address = match get_mac_address() {
-        Ok(Some(address)) => address.to_string(),
-        Ok(None) => String::new(),
-        Err(e) => format!("{}", e),
-    };
-
     serde_json::json!({
-        "mac_address": mac_address,
         "username": ::whoami::username(),
         "devicename": ::whoami::devicename(),
         "platform": ::whoami::platform().to_string(),
