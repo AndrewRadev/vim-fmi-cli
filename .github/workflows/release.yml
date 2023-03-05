@@ -1,5 +1,5 @@
 # .github/workflows/release.yml
-# Taken from <https://github.com/marketplace/actions/rust-release-binary> v1.4.0
+# Taken from <https://github.com/marketplace/actions/rust-release-binary> v1.4.2
 
 on:
   release:
@@ -22,7 +22,7 @@ jobs:
     steps:
       - uses: actions/checkout@master
       - name: Compile and release
-        uses: rust-build/rust-build.action@v1.4.0
+        uses: rust-build/rust-build.action@v1.4.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
