@@ -31,6 +31,9 @@ enum Commands {
         task_id: String,
     },
 
+    /// Стартира Vim-а, който програмата може да намери. За тестване
+    Vim,
+
     /// Показва текущата версия на клиента
     Version,
 }
@@ -55,6 +58,19 @@ fn run(args: &Cli) -> anyhow::Result<()> {
         };
 
     match &args.command {
+        Commands::Vim => {
+            let controller = Controller::new(host.clone())?;
+            let input_path = controller.create_file("scratch", "")?;
+            let log_path = controller.create_file("log", "")?;
+            let vimrc_path = controller.vimrc_path();
+            let vim = Vim::new(input_path, log_path, vimrc_path);
+
+            let (_, log_bytes) = vim.run()?;
+
+            let keylog = Keylog::new(&log_bytes);
+            let script: String = keylog.into_iter().collect();
+            println!("Клавишите ти бяха:\n{}", script);
+        },
         Commands::Setup { user_token } => {
             let controller = Controller::new(host.clone())?;
             let _ = controller.setup_user(&user_token)?;

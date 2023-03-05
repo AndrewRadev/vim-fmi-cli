@@ -3,7 +3,9 @@ use std::path::PathBuf;
 use std::collections::HashMap;
 use std::process::Command;
 
+use anyhow::anyhow;
 use once_cell::sync::OnceCell;
+use which::which;
 
 pub struct Vim {
     input_path: PathBuf,
@@ -17,6 +19,15 @@ impl Vim {
     }
 
     pub fn run(&self) -> ::anyhow::Result<(String, Vec<u8>)> {
+        let executable =
+            if which("mvim").is_ok() {
+                "mvim"
+            } else if which("gvim").is_ok() {
+                "gvim"
+            } else {
+                return Err(anyhow!("Не беше намерен нито `mvim`, нито `gvim`, вижте дали програмата е в $PATH"));
+            };
+
         // -Z         - restricted mode, utilities not allowed
         // -n         - no swap file, memory only editing
         // --noplugin - don't load any plugins, lets be fair!
@@ -26,7 +37,7 @@ impl Vim {
         // -u vimrc   - load vimgolf .vimrc to level the playing field
         // -U NONE    - don't load .gvimrc
         // -W logfile - keylog file (overwrites if already exists)
-        Command::new("gvim").
+        Command::new(executable).
             args(["--nofork", "-Z", "-n", "--noplugin", "-i", "NONE", "+0", "-U", "NONE"]).
             args(["-u", self.vimrc_path.to_str().unwrap()]).
             args(["-W", self.log_path.to_str().unwrap()]).
