@@ -32,7 +32,7 @@ impl Controller {
     }
 
     pub fn setup_user(&self, user_token: &str) -> ::anyhow::Result<User> {
-        let endpoint = self.host.join("/user_tokens/activate.json")?;
+        let endpoint = self.host.join("/api/setup.json")?;
         let client = reqwest::blocking::Client::new();
         let meta = get_meta();
 
@@ -48,7 +48,7 @@ impl Controller {
     }
 
     pub fn download_task(&self, task_id: &str) -> ::anyhow::Result<Task> {
-        let path = format!("/tasks/{}.json", task_id);
+        let path = format!("/api/task/{}.json", task_id);
         let endpoint = self.host.join(&path)?;
         let response = reqwest::blocking::get(endpoint)?;
         let exercise = response.json()?;
@@ -57,7 +57,7 @@ impl Controller {
     }
 
     pub fn upload(&self, task_id: &str, bytes: Vec<u8>) -> ::anyhow::Result<bool> {
-        let endpoint = self.host.join("/entry.json")?;
+        let endpoint = self.host.join("/api/solution.json")?;
         let client = reqwest::blocking::Client::new();
         let meta = get_meta();
         // Unwrap: We should have checked for a user before

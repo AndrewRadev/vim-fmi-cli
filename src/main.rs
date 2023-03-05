@@ -101,8 +101,12 @@ fn run(args: &Cli) -> anyhow::Result<()> {
             let trimmed_output = output.trim();
 
             if trimmed_output == task.output {
-                controller.upload(&task_id, log_bytes)?;
-                println!("Супер, решението е качено. Клавишите ти бяха:\n{}", script);
+                if controller.upload(&task_id, log_bytes)? {
+                    println!("Супер, решението е качено. Клавишите ти бяха:\n{}", script);
+                } else {
+                    println!("Имаше проблем при качване на решението, пробвай пак.");
+                    println!("Ако не проработи 2-3 пъти, пиши в Discord или по мейл.");
+                }
             } else {
                 println!("Не се получи, клавишите ти бяха:\n{}", script);
                 println!();
