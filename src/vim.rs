@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::PathBuf;
 use std::collections::HashMap;
-use std::process::{Command, ExitStatus};
+use std::process::Command;
 
 use anyhow::anyhow;
 use once_cell::sync::OnceCell;
@@ -20,7 +20,7 @@ impl Vim {
 
     pub fn run(&self) -> ::anyhow::Result<(String, Vec<u8>)> {
         let executable =
-            if let Ok(custom_value) = std::env::var("VIM") {
+            if let Ok(custom_value) = std::env::var("VIMFMI_EXECUTABLE") {
                 custom_value
             } else if which("mvim").is_ok() {
                 String::from("mvim")

@@ -42,7 +42,7 @@ fn main() -> ExitCode {
     let args = Cli::parse();
 
     if let Err(e) = run(&args) {
-        eprintln!("Error: {}", e);
+        eprintln!("Грешка: {}", e);
         return ExitCode::FAILURE;
     }
 
