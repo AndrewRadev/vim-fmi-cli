@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::PathBuf;
 use std::collections::HashMap;
-use std::process::Command;
+use std::process::{Command, ExitStatus};
 
 use anyhow::anyhow;
 use once_cell::sync::OnceCell;
@@ -26,8 +26,10 @@ impl Vim {
                 String::from("mvim")
             } else if which("gvim").is_ok() {
                 String::from("gvim")
+            } else if which("vim").is_ok() {
+                String::from("vim")
             } else {
-                return Err(anyhow!("Не беше намерен нито `mvim`, нито `gvim`, вижте дали програмата е в $PATH"));
+                return Err(anyhow!("Не беше намерен нито `mvim`, нито `gvim`, нито `vim`, вижте дали програмата е в $PATH"));
             };
 
         // -Z         - restricted mode, utilities not allowed
@@ -39,12 +41,16 @@ impl Vim {
         // -u vimrc   - load vimgolf .vimrc to level the playing field
         // -U NONE    - don't load .gvimrc
         // -W logfile - keylog file (overwrites if already exists)
-        Command::new(executable).
+        let mut command = Command::new(executable);
+        let command = command.
             args(["--nofork", "-Z", "-n", "--noplugin", "-i", "NONE", "+0", "-U", "NONE"]).
             args(["-u", self.vimrc_path.to_str().unwrap()]).
             args(["-W", self.log_path.to_str().unwrap()]).
-            arg(self.input_path.to_str().unwrap()).
-            output()?;
+            arg(self.input_path.to_str().unwrap());
+
+        if !command.spawn()?.wait()?.success() {
+            return Err(anyhow!("Vim излезе с неуспешен статус."));
+        }
 
         let result = fs::read_to_string(&self.input_path)?;
         let log = fs::read(&self.log_path)?;
