@@ -41,12 +41,19 @@ impl Vim {
         // -u vimrc   - load vimgolf .vimrc to level the playing field
         // -U NONE    - don't load .gvimrc
         // -W logfile - keylog file (overwrites if already exists)
-        let mut command = Command::new(executable);
-        let command = command.
-            args(["--nofork", "-Z", "-n", "--noplugin", "-i", "NONE", "+0", "-U", "NONE"]).
+        let mut command = Command::new(&executable);
+        let mut command = command.
+            args(["-n", "--noplugin", "-i", "NONE", "+0", "-U", "NONE"]).
             args(["-u", self.vimrc_path.to_str().unwrap()]).
             args(["-W", self.log_path.to_str().unwrap()]).
             arg(self.input_path.to_str().unwrap());
+
+        if executable == "gvim" {
+            command = command.arg("--nofork");
+        }
+        if executable != "nvim" {
+            command = command.arg("-Z");
+        }
 
         if !command.spawn()?.wait()?.success() {
             return Err(anyhow!("Vim излезе с неуспешен статус."));
