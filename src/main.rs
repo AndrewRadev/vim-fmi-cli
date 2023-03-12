@@ -98,9 +98,12 @@ fn run(args: &Cli) -> anyhow::Result<()> {
             let (output, log_bytes) = vim.run()?;
             let keylog = Keylog::new(&log_bytes);
             let script: String = keylog.into_iter().collect();
-            let trimmed_output = output.trim();
 
-            if trimmed_output == task.output {
+            let trimmed_output = output.trim();
+            let trimmed_output_lines: Vec<_> = trimmed_output.lines().collect();
+            let task_output_lines: Vec<_> = task.output.lines().collect();
+
+            if trimmed_output_lines == task_output_lines {
                 if controller.upload(&task_id, log_bytes)? {
                     println!("Супер, решението е качено. Клавишите ти бяха:\n{}", script);
                 } else {
