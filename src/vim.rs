@@ -42,6 +42,29 @@ impl Vim {
         // -U NONE    - don't load .gvimrc
         // -W logfile - keylog file (overwrites if already exists)
         let mut command = Command::new(&executable);
+        let command = self.build_command(&mut command, &executable);
+
+        if !command.spawn()?.wait()?.success() {
+            return Err(anyhow!("Vim излезе с неуспешен статус."));
+        }
+
+        let result = fs::read_to_string(&self.input_path)?;
+        let log = fs::read(&self.log_path)?;
+
+        Ok((result, log))
+    }
+
+    #[cfg(target_os = "macos")]
+    fn build_command<'a>(&self, command: &'a mut Command, _executable: &str) -> &'a mut Command {
+        command.
+            args(["--nofork", "-Z", "-n", "--noplugin", "-i", "NONE", "+0", "-U", "NONE"]).
+            args(["-u", self.vimrc_path.to_str().unwrap()]).
+            args(["-W", self.log_path.to_str().unwrap()]).
+            arg(self.input_path.to_str().unwrap())
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    fn build_command<'a>(&self, command: &'a mut Command, executable: &str) -> &'a mut Command {
         let mut command = command.
             args(["-n", "--noplugin", "-i", "NONE", "+0", "-U", "NONE"]).
             args(["-u", self.vimrc_path.to_str().unwrap()]).
@@ -55,14 +78,7 @@ impl Vim {
             command = command.arg("-Z");
         }
 
-        if !command.spawn()?.wait()?.success() {
-            return Err(anyhow!("Vim излезе с неуспешен статус."));
-        }
-
-        let result = fs::read_to_string(&self.input_path)?;
-        let log = fs::read(&self.log_path)?;
-
-        Ok((result, log))
+        command
     }
 }
 
