@@ -100,8 +100,8 @@ fn run(args: &Cli) -> anyhow::Result<()> {
             let script: String = keylog.into_iter().collect();
 
             let trimmed_output = output.trim();
-            let trimmed_output_lines: Vec<_> = trimmed_output.lines().collect();
-            let task_output_lines: Vec<_> = task.output.lines().collect();
+            let trimmed_output_lines = normalized_lines(trimmed_output);
+            let task_output_lines = normalized_lines(&task.output);
 
             if trimmed_output_lines == task_output_lines {
                 if controller.upload(&task_id, log_bytes)? {
@@ -124,6 +124,10 @@ fn run(args: &Cli) -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+fn normalized_lines(input: &str) -> Vec<String> {
+    input.trim().lines().map(|s| s.trim_end().to_string()).collect()
 }
 
 fn print_diff(input: &str, output: &str) {
