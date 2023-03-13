@@ -5,7 +5,6 @@ use std::fs::{self, File};
 
 use anyhow::anyhow;
 use url::Url;
-use tempfile::TempDir;
 use serde::{Serialize, Deserialize};
 use base64::{Engine as _};
 use directories::ProjectDirs;
@@ -14,20 +13,21 @@ const VIMRC_CONTENTS: &'static str = include_str!("vimrc");
 
 pub struct Controller {
     host: Url,
-    tempdir: TempDir,
+    tempdir: PathBuf,
 }
 
 impl Controller {
     pub fn new(host: Url) -> ::anyhow::Result<Self> {
-        let tempdir = TempDir::new()?;
+        let tempdir = std::env::temp_dir().join("vim-fmi");
 
-        fs::write(tempdir.path().join("vimrc"), VIMRC_CONTENTS)?;
+        fs::create_dir_all(&tempdir)?;
+        fs::write(tempdir.join("vimrc"), VIMRC_CONTENTS)?;
 
         Ok(Self { host, tempdir })
     }
 
     pub fn vimrc_path(&self) -> PathBuf {
-        self.tempdir.path().join("vimrc").to_owned()
+        self.tempdir.join("vimrc").to_owned()
     }
 
     pub fn setup_user(&self, user_token: &str) -> ::anyhow::Result<User> {
@@ -78,9 +78,15 @@ impl Controller {
     }
 
     pub fn create_file(&self, name: &str, contents: &str) -> ::anyhow::Result<PathBuf> {
-        let path = self.tempdir.path().join(name);
+        let path = self.tempdir.join(name);
         fs::write(&path, contents)?;
         Ok(path)
+    }
+}
+
+impl Drop for Controller {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.tempdir);
     }
 }
 
