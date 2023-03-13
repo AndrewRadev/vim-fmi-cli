@@ -25,6 +25,12 @@ syntax on               " turn syntax highlighting on by default
 filetype on             " detect type of file
 filetype indent on      " load indent file for specific file type
 
+" We'll never have tabs in the exercises
+set expandtab
+set shiftwidth=2
+set softtabstop=2
+set tabstop=8 " to make it more visible if it does happen
+
 set t_RV=               " http://bugs.debian.org/608242, http://groups.google.com/group/vim_dev/browse_thread/thread/9770ea844cec3282
 
 " We don't need no GUI
