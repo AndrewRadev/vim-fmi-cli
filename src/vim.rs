@@ -54,31 +54,12 @@ impl Vim {
         Ok((result, log))
     }
 
-    #[cfg(target_os = "macos")]
     fn build_command<'a>(&self, command: &'a mut Command, _executable: &str) -> &'a mut Command {
         command.
             args(["--nofork", "-Z", "-n", "--noplugin", "-i", "NONE", "+0", "-U", "NONE"]).
             args(["-u", self.vimrc_path.to_str().unwrap()]).
             args(["-W", self.log_path.to_str().unwrap()]).
             arg(self.input_path.to_str().unwrap())
-    }
-
-    #[cfg(not(target_os = "macos"))]
-    fn build_command<'a>(&self, command: &'a mut Command, executable: &str) -> &'a mut Command {
-        let mut command = command.
-            args(["-n", "--noplugin", "-i", "NONE", "+0", "-U", "NONE"]).
-            args(["-u", self.vimrc_path.to_str().unwrap()]).
-            args(["-W", self.log_path.to_str().unwrap()]).
-            arg(self.input_path.to_str().unwrap());
-
-        if executable == "gvim" {
-            command = command.arg("--nofork");
-        }
-        if executable != "nvim" {
-            command = command.arg("-Z");
-        }
-
-        command
     }
 }
 
