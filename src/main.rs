@@ -4,7 +4,7 @@ use clap::{Parser, Subcommand};
 use url::Url;
 use similar::{TextDiff, ChangeTag};
 
-use vim_fmi::{Controller, read_user};
+use vim_fmi::controller::{Controller, read_user};
 use vim_fmi::vim::{Vim, Keylog};
 
 #[derive(Debug, Parser)]
