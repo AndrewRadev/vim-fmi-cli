@@ -38,19 +38,30 @@ impl Controller {
             ("meta", meta.to_string()),
         ])?;
 
-        let user = client.post(endpoint).body(body).send()?.json()?;
-        write_user(&user)?;
+        let response = client.post(endpoint).body(body).send()?;
 
-        Ok(user)
+        if response.status() == 200 {
+            let user = response.json()?;
+            write_user(&user)?;
+            Ok(user)
+        } else {
+            let error: JsonError = response.json()?;
+            Err(anyhow!("{}", error.message))
+        }
     }
 
     pub fn download_task(&self, task_id: &str) -> ::anyhow::Result<Task> {
         let path = format!("/api/task/{}.json", task_id);
         let endpoint = self.host.join(&path)?;
         let response = reqwest::blocking::get(endpoint)?;
-        let exercise = response.json()?;
 
-        Ok(exercise)
+        if response.status() == 200 {
+            let exercise = response.json()?;
+            Ok(exercise)
+        } else {
+            let error: JsonError = response.json()?;
+            Err(anyhow!("{}", error.message))
+        }
     }
 
     pub fn upload(&self, task_id: &str, bytes: Vec<u8>) -> ::anyhow::Result<bool> {
@@ -71,7 +82,8 @@ impl Controller {
         if response.status().is_success() {
             Ok(true)
         } else {
-            Ok(false)
+            let error: JsonError = response.json()?;
+            Err(anyhow!("{}", error.message))
         }
     }
 
@@ -113,6 +125,11 @@ fn write_user(user: &User) -> ::anyhow::Result<()> {
     fs::write(data_dir.join("user.json"), serde_json::to_string(user)?)?;
 
     Ok(())
+}
+
+#[derive(Debug, Deserialize)]
+pub struct JsonError {
+    pub message: String,
 }
 
 #[derive(Debug, Deserialize)]
