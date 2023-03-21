@@ -35,7 +35,7 @@ impl Vim {
         // -Z         - restricted mode, utilities not allowed
         // -n         - no swap file, memory only editing
         // --noplugin - don't load any plugins, lets be fair!
-        // --nofork   - otherwise GOLFVIM=gvim forks and returns immediately
+        // --nofork   - otherwise gvim forks and returns immediately, mvim has permission issues
         // -i NONE    - don't load .viminfo (for saved macros and the like)
         // +0         - always start on line 0
         // -u vimrc   - load vimgolf .vimrc to level the playing field
@@ -54,9 +54,13 @@ impl Vim {
         Ok((result, log))
     }
 
-    fn build_command<'a>(&self, command: &'a mut Command, _executable: &str) -> &'a mut Command {
+    fn build_command<'a>(&self, mut command: &'a mut Command, executable: &str) -> &'a mut Command {
+        if executable != "nvim" {
+            command = command.args(["--nofork", "-Z"]);
+        }
+
         command.
-            args(["--nofork", "-Z", "-n", "--noplugin", "-i", "NONE", "+0", "-U", "NONE"]).
+            args(["-n", "--noplugin", "-i", "NONE", "+0", "-U", "NONE"]).
             args(["-u", self.vimrc_path.to_str().unwrap()]).
             args(["-W", self.log_path.to_str().unwrap()]).
             arg(self.input_path.to_str().unwrap())
