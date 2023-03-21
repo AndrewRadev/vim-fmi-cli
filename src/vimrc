@@ -34,7 +34,7 @@ set tabstop=8 " to make it more visible if it does happen
 set t_RV=               " http://bugs.debian.org/608242, http://groups.google.com/group/vim_dev/browse_thread/thread/9770ea844cec3282
 
 " We don't need no GUI
-set guioptions=
+set guioptions=c
 
 if has('win32') || has('win64')
   set guifont=Courier\ New:h14
