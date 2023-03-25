@@ -1,4 +1,5 @@
 use std::process::{self, ExitCode};
+use std::time::Instant;
 
 use clap::{Parser, Subcommand};
 use url::Url;
@@ -63,9 +64,9 @@ fn run(args: &Cli) -> anyhow::Result<()> {
             let input_path = controller.create_file("scratch", "")?;
             let log_path = controller.create_file("log", "")?;
             let vimrc_path = controller.vimrc_path();
-            let vim = Vim::new(input_path, log_path, vimrc_path);
+            let vim = Vim::new(vimrc_path)?;
 
-            let (_, log_bytes) = vim.run()?;
+            let (_, log_bytes) = vim.run(&input_path, &log_path)?;
 
             let keylog = Keylog::new(&log_bytes);
             let script: String = keylog.into_iter().collect();
@@ -93,9 +94,12 @@ fn run(args: &Cli) -> anyhow::Result<()> {
             let input_path = controller.create_file("input", &task.input)?;
             let log_path = controller.create_file("log", "")?;
             let vimrc_path = controller.vimrc_path();
-            let vim = Vim::new(input_path, log_path, vimrc_path);
+            let vim = Vim::new(vimrc_path)?;
 
-            let (output, log_bytes) = vim.run()?;
+            let start_time = Instant::now();
+            let (output, log_bytes) = vim.run(&input_path, &log_path)?;
+            let elapsed_time = start_time.elapsed().as_millis();
+
             let keylog = Keylog::new(&log_bytes);
             let script: String = keylog.into_iter().collect();
 
@@ -104,7 +108,7 @@ fn run(args: &Cli) -> anyhow::Result<()> {
             let task_output_lines = normalized_lines(&task.output);
 
             if trimmed_output_lines == task_output_lines {
-                if controller.upload(task_id, log_bytes)? {
+                if controller.upload(task_id, log_bytes, &vim.executable, elapsed_time)? {
                     println!("Супер, решението е качено. Клавишите ти бяха:\n{}", script);
                 } else {
                     println!("Имаше проблем при качване на решението, пробвай пак.");

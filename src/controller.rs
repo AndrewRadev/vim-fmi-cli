@@ -31,7 +31,7 @@ impl Controller {
     pub fn setup_user(&self, user_token: &str) -> ::anyhow::Result<User> {
         let endpoint = self.host.join("/api/setup.json")?;
         let client = reqwest::blocking::Client::new();
-        let meta = get_meta();
+        let meta = get_meta(None, None);
 
         let body = serde_urlencoded::to_string([
             ("token", user_token.to_owned()),
@@ -64,10 +64,16 @@ impl Controller {
         }
     }
 
-    pub fn upload(&self, task_id: &str, bytes: Vec<u8>) -> ::anyhow::Result<bool> {
+    pub fn upload(
+        &self,
+        task_id: &str,
+        bytes: Vec<u8>,
+        vim_executable: &str,
+        elapsed_time: u128,
+    ) -> ::anyhow::Result<bool> {
         let endpoint = self.host.join("/api/solution.json")?;
         let client = reqwest::blocking::Client::new();
-        let meta = get_meta();
+        let meta = get_meta(Some(vim_executable), Some(elapsed_time));
         // Unwrap: We should have checked for a user before
         let user = read_user()?.unwrap();
 
@@ -94,11 +100,14 @@ impl Controller {
     }
 }
 
-fn get_meta() -> serde_json::Value {
+fn get_meta(vim_executable: Option<&str>, elapsed_time: Option<u128>) -> serde_json::Value {
     serde_json::json!({
         "username": ::whoami::username(),
         "devicename": ::whoami::devicename(),
         "platform": ::whoami::platform().to_string(),
+        "client_version": ::clap::crate_version!(),
+        "vim_executable": vim_executable,
+        "time": elapsed_time,
     })
 }
 

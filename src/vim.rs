@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::PathBuf;
+use std::path::{PathBuf, Path};
 use std::collections::HashMap;
 use std::process::Command;
 
@@ -8,17 +8,12 @@ use once_cell::sync::OnceCell;
 use which::which;
 
 pub struct Vim {
-    input_path: PathBuf,
-    log_path: PathBuf,
+    pub executable: String,
     vimrc_path: PathBuf,
 }
 
 impl Vim {
-    pub fn new(input_path: PathBuf, log_path: PathBuf, vimrc_path: PathBuf) -> Self {
-        Self { input_path, log_path, vimrc_path }
-    }
-
-    pub fn run(&self) -> ::anyhow::Result<(String, Vec<u8>)> {
+    pub fn new(vimrc_path: PathBuf) -> ::anyhow::Result<Self> {
         let executable =
             if let Ok(custom_value) = std::env::var("VIMFMI_EXECUTABLE") {
                 custom_value
@@ -32,6 +27,10 @@ impl Vim {
                 return Err(anyhow!("Не беше намерен нито `mvim`, нито `gvim`, нито `vim`, вижте дали програмата е в $PATH"));
             };
 
+        Ok(Self { executable, vimrc_path })
+    }
+
+    pub fn run(&self, input_path: &Path, log_path: &Path) -> ::anyhow::Result<(String, Vec<u8>)> {
         // -Z         - restricted mode, utilities not allowed
         // -n         - no swap file, memory only editing
         // --noplugin - don't load any plugins, lets be fair!
@@ -41,29 +40,27 @@ impl Vim {
         // -u vimrc   - load vimgolf .vimrc to level the playing field
         // -U NONE    - don't load .gvimrc
         // -W logfile - keylog file (overwrites if already exists)
-        let mut command = Command::new(&executable);
-        let command = self.build_command(&mut command, &executable);
+        let mut command = Command::new(&self.executable);
+        let mut command = &mut command;
+
+        if self.executable != "nvim" {
+            command = command.args(["--nofork", "-Z"]);
+        }
+
+        command = command.
+            args(["-n", "--noplugin", "-i", "NONE", "+0", "-U", "NONE"]).
+            args(["-u", self.vimrc_path.to_str().unwrap()]).
+            args(["-W", log_path.to_str().unwrap()]).
+            arg(input_path.to_str().unwrap());
 
         if !command.spawn()?.wait()?.success() {
             return Err(anyhow!("Vim излезе с неуспешен статус."));
         }
 
-        let result = fs::read_to_string(&self.input_path)?;
-        let log = fs::read(&self.log_path)?;
+        let result = fs::read_to_string(input_path)?;
+        let log = fs::read(log_path)?;
 
         Ok((result, log))
-    }
-
-    fn build_command<'a>(&self, mut command: &'a mut Command, executable: &str) -> &'a mut Command {
-        if executable != "nvim" {
-            command = command.args(["--nofork", "-Z"]);
-        }
-
-        command.
-            args(["-n", "--noplugin", "-i", "NONE", "+0", "-U", "NONE"]).
-            args(["-u", self.vimrc_path.to_str().unwrap()]).
-            args(["-W", self.log_path.to_str().unwrap()]).
-            arg(self.input_path.to_str().unwrap())
     }
 }
 
