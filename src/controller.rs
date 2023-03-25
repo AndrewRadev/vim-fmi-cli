@@ -8,7 +8,7 @@ use serde::{Serialize, Deserialize};
 use base64::{Engine as _};
 use directories::ProjectDirs;
 
-const VIMRC_CONTENTS: &'static str = include_str!("vimrc");
+const VIMRC_CONTENTS: &str = include_str!("vimrc");
 
 pub struct Controller {
     host: Url,
@@ -25,7 +25,7 @@ impl Controller {
     }
 
     pub fn vimrc_path(&self) -> PathBuf {
-        self.tempdir.path().join("vimrc").to_owned()
+        self.tempdir.path().join("vimrc")
     }
 
     pub fn setup_user(&self, user_token: &str) -> ::anyhow::Result<User> {
@@ -33,7 +33,7 @@ impl Controller {
         let client = reqwest::blocking::Client::new();
         let meta = get_meta();
 
-        let body = serde_urlencoded::to_string(&[
+        let body = serde_urlencoded::to_string([
             ("token", user_token.to_owned()),
             ("meta", meta.to_string()),
         ])?;
@@ -71,8 +71,8 @@ impl Controller {
         // Unwrap: We should have checked for a user before
         let user = read_user()?.unwrap();
 
-        let body = serde_urlencoded::to_string(&[
-            ("entry", ::base64::engine::general_purpose::STANDARD.encode(&bytes)),
+        let body = serde_urlencoded::to_string([
+            ("entry", ::base64::engine::general_purpose::STANDARD.encode(bytes)),
             ("challenge_id", task_id.to_owned()),
             ("user_token", user.token),
             ("meta", meta.to_string()),

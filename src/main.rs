@@ -59,7 +59,7 @@ fn run(args: &Cli) -> anyhow::Result<()> {
 
     match &args.command {
         Commands::Vim => {
-            let controller = Controller::new(host.clone())?;
+            let controller = Controller::new(host)?;
             let input_path = controller.create_file("scratch", "")?;
             let log_path = controller.create_file("log", "")?;
             let vimrc_path = controller.vimrc_path();
@@ -72,8 +72,8 @@ fn run(args: &Cli) -> anyhow::Result<()> {
             println!("Клавишите ти бяха:\n{}", script);
         },
         Commands::Setup { user_token } => {
-            let controller = Controller::new(host.clone())?;
-            let _ = controller.setup_user(&user_token)?;
+            let controller = Controller::new(host)?;
+            let _ = controller.setup_user(user_token)?;
 
             println!("Токена ти е активиран, вече можеш да пускаш решения");
         },
@@ -87,8 +87,8 @@ fn run(args: &Cli) -> anyhow::Result<()> {
                 process::exit(1);
             }
 
-            let controller = Controller::new(host.clone())?;
-            let task = controller.download_task(&task_id)?;
+            let controller = Controller::new(host)?;
+            let task = controller.download_task(task_id)?;
 
             let input_path = controller.create_file("input", &task.input)?;
             let log_path = controller.create_file("log", "")?;
@@ -104,7 +104,7 @@ fn run(args: &Cli) -> anyhow::Result<()> {
             let task_output_lines = normalized_lines(&task.output);
 
             if trimmed_output_lines == task_output_lines {
-                if controller.upload(&task_id, log_bytes)? {
+                if controller.upload(task_id, log_bytes)? {
                     println!("Супер, решението е качено. Клавишите ти бяха:\n{}", script);
                 } else {
                     println!("Имаше проблем при качване на решението, пробвай пак.");
