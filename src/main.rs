@@ -91,7 +91,8 @@ fn run(args: &Cli) -> anyhow::Result<()> {
             let controller = Controller::new(host)?;
             let task = controller.download_task(task_id)?;
 
-            let input_path = controller.create_file("input", &task.input)?;
+            let input_filename = format!("input.{}", task.file_extension.unwrap_or(String::from("txt")));
+            let input_path = controller.create_file(&input_filename, &task.input)?;
             let log_path = controller.create_file("log", "")?;
             let vimrc_path = controller.vimrc_path();
             let vim = Vim::new(vimrc_path)?;

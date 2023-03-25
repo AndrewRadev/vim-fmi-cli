@@ -9,6 +9,10 @@ set nobackup            " do not keep a backup file
 set number              " show line numbers
 set ruler               " show the current row and column
 
+" show the statusline, without the filename
+set laststatus=2
+set statusline=%<[%{&ft}]\ %h%m%r%=%-14.(%l,%c%V%)\ %P
+
 set hlsearch            " highlight searches
 set incsearch           " do incremental searching
 set showmatch           " jump to matches when entering regexp

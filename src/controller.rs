@@ -146,6 +146,7 @@ pub struct Task {
     pub input: String,
     pub output: String,
     pub version: String,
+    pub file_extension: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
