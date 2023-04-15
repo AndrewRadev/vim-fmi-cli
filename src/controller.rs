@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 use std::fs::{self, File};
+use std::io::Write;
 
 use anyhow::anyhow;
 use url::Url;
@@ -58,6 +59,34 @@ impl Controller {
         if response.status() == 200 {
             let exercise = response.json()?;
             Ok(exercise)
+        } else {
+            let error: JsonError = response.json()?;
+            Err(anyhow!("{}", error.message))
+        }
+    }
+
+    pub fn download_vimrc(&self, user_token: &str) -> ::anyhow::Result<()> {
+        let path = format!("/api/vimrc/{}.json", user_token);
+        let endpoint = self.host.join(&path)?;
+        let response = reqwest::blocking::get(endpoint)?;
+
+        if response.status() == 200 {
+            let vimrc: Vimrc = response.json()?;
+
+            // We print line by line to make sure we've got the right EOLs
+            if let Some(body) = vimrc.body {
+                // We append to the existing vimrc to make sure we've got the basics down
+                let mut file = File::options().append(true).open(self.vimrc_path())?;
+
+                for line in body.lines() {
+                    writeln!(file, "{}", line)?;
+                }
+            }
+
+            // TODO: Debug mode
+            // println!("{}", fs::read_to_string(self.vimrc_path()).unwrap());
+
+            Ok(())
         } else {
             let error: JsonError = response.json()?;
             Err(anyhow!("{}", error.message))
@@ -154,4 +183,9 @@ pub struct User {
     pub id: u32,
     pub faculty_number: String,
     pub token: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Vimrc {
+    pub body: Option<String>,
 }

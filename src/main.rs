@@ -30,10 +30,17 @@ enum Commands {
     Put {
         /// Идентификатора на дадено упражнение
         task_id: String,
+        /// Ако е подадено, няма да се изтегли личното vimrc от сайта
+        #[arg(long)]
+        novimrc: bool,
     },
 
     /// Стартира Vim-а, който програмата може да намери. За тестване
-    Vim,
+    Vim {
+        /// Ако е подадено, няма да се изтегли личното vimrc от сайта
+        #[arg(long)]
+        novimrc: bool,
+    },
 
     /// Показва текущата версия на клиента
     Version,
@@ -59,10 +66,19 @@ fn run(args: &Cli) -> anyhow::Result<()> {
         };
 
     match &args.command {
-        Commands::Vim => {
+        Commands::Vim { novimrc } => {
             let controller = Controller::new(host)?;
             let input_path = controller.create_file("scratch", "")?;
             let log_path = controller.create_file("log", "")?;
+
+            if !novimrc {
+                if let Ok(Some(user)) = read_user() {
+                    if let Err(e) = controller.download_vimrc(&user.token) {
+                        eprintln!("Имаше проблем с изтеглянето на твоето vimrc, използваме стандартното: {e}");
+                    }
+                }
+            }
+
             let vimrc_path = controller.vimrc_path();
             let vim = Vim::new(vimrc_path)?;
 
@@ -78,18 +94,24 @@ fn run(args: &Cli) -> anyhow::Result<()> {
 
             println!("Токена ти е активиран, вече можеш да пускаш решения");
         },
-        Commands::Put { task_id } => {
-            if read_user()?.is_none() {
+        Commands::Put { task_id, novimrc } => {
+            let Some(user) = read_user()? else {
                 eprintln!("Не си се активирал на този компютър.");
                 eprintln!("Иди в сайта (https://vim-fmi.bg/user_tokens), създай си token и извикай:");
                 eprintln!();
                 eprintln!("  vim-fmi setup <token>");
                 eprintln!();
                 process::exit(1);
-            }
+            };
 
             let controller = Controller::new(host)?;
             let task = controller.download_task(task_id)?;
+
+            if !novimrc {
+                if let Err(e) = controller.download_vimrc(&user.token) {
+                    eprintln!("Имаше проблем с изтеглянето на твоето vimrc, използваме стандартното: {e}");
+                }
+            }
 
             let input_filename = format!("input.{}", task.file_extension.unwrap_or(String::from("txt")));
             let input_path = controller.create_file(&input_filename, &task.input)?;
