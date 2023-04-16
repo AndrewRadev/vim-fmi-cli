@@ -67,7 +67,7 @@ fn run(args: &Cli) -> anyhow::Result<()> {
 
     match &args.command {
         Commands::Vim { novimrc } => {
-            let controller = Controller::new(host)?;
+            let mut controller = Controller::new(host)?;
             let input_path = controller.create_file("scratch", "")?;
             let log_path = controller.create_file("log", "")?;
 
@@ -104,7 +104,7 @@ fn run(args: &Cli) -> anyhow::Result<()> {
                 process::exit(1);
             };
 
-            let controller = Controller::new(host)?;
+            let mut controller = Controller::new(host)?;
             let task = controller.download_task(task_id)?;
 
             if !novimrc {

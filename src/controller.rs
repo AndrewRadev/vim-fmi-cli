@@ -14,6 +14,7 @@ const VIMRC_CONTENTS: &str = include_str!("vimrc");
 pub struct Controller {
     host: Url,
     tempdir: TempDir,
+    vimrc_revision_id: Option<u32>,
 }
 
 impl Controller {
@@ -22,7 +23,7 @@ impl Controller {
 
         fs::write(tempdir.path().join("vimrc"), VIMRC_CONTENTS)?;
 
-        Ok(Self { host, tempdir })
+        Ok(Self { host, tempdir, vimrc_revision_id: None })
     }
 
     pub fn vimrc_path(&self) -> PathBuf {
@@ -65,13 +66,14 @@ impl Controller {
         }
     }
 
-    pub fn download_vimrc(&self, user_token: &str) -> ::anyhow::Result<()> {
+    pub fn download_vimrc(&mut self, user_token: &str) -> ::anyhow::Result<()> {
         let path = format!("/api/vimrc/{}.json", user_token);
         let endpoint = self.host.join(&path)?;
         let response = reqwest::blocking::get(endpoint)?;
 
         if response.status() == 200 {
             let vimrc: Vimrc = response.json()?;
+            self.vimrc_revision_id = vimrc.revision_id;
 
             // We print line by line to make sure we've got the right EOLs
             if let Some(body) = vimrc.body {
@@ -106,9 +108,14 @@ impl Controller {
         // Unwrap: We should have checked for a user before
         let user = read_user()?.unwrap();
 
+        let vimrc_revision_id = self.vimrc_revision_id.
+            map(|id| id.to_string()).
+            unwrap_or_else(String::new);
+
         let body = serde_urlencoded::to_string([
             ("entry", ::base64::engine::general_purpose::STANDARD.encode(bytes)),
             ("challenge_id", task_id.to_owned()),
+            ("vimrc_revision_id", vimrc_revision_id),
             ("user_token", user.token),
             ("meta", meta.to_string()),
         ])?;
@@ -187,5 +194,6 @@ pub struct User {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Vimrc {
+    pub revision_id: Option<u32>,
     pub body: Option<String>,
 }
