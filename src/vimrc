@@ -44,3 +44,6 @@ set guioptions=c
 if has('win32') || has('win64')
   set guifont=Courier\ New:h14
 endif
+
+" Avoid problems with ruby support trying to load ruby
+let g:ruby_path = []
