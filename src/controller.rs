@@ -12,9 +12,9 @@ use directories::ProjectDirs;
 const VIMRC_CONTENTS: &str = include_str!("vimrc");
 
 #[cfg(windows)]
-const EOL: &'static str = "\r\n";
+const EOL: &str = "\r\n";
 #[cfg(not(windows))]
-const EOL: &'static str = "\n";
+const EOL: &str = "\n";
 
 pub struct Controller {
     host: Url,
