@@ -11,6 +11,11 @@ use directories::ProjectDirs;
 
 const VIMRC_CONTENTS: &str = include_str!("vimrc");
 
+#[cfg(windows)]
+const EOL: &'static str = "\r\n";
+#[cfg(not(windows))]
+const EOL: &'static str = "\n";
+
 pub struct Controller {
     host: Url,
     tempdir: TempDir,
@@ -79,9 +84,10 @@ impl Controller {
             if let Some(body) = vimrc.body {
                 // We append to the existing vimrc to make sure we've got the basics down
                 let mut file = File::options().append(true).open(self.vimrc_path())?;
+                write!(file, "{}", EOL)?;
 
                 for line in body.lines() {
-                    writeln!(file, "{}", line)?;
+                    write!(file, "{}{}", line, EOL)?;
                 }
             }
 
