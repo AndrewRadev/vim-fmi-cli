@@ -35,6 +35,16 @@ enum Commands {
         novimrc: bool,
     },
 
+    /// Стартира свободно упражнение с подадения идентификатор
+    #[command(arg_required_else_help = true)]
+    Free {
+        /// Идентификатора на дадено свободно упражнение
+        free_task_id: String,
+        /// Ако е подадено, няма да се изтегли личното vimrc от сайта
+        #[arg(long)]
+        novimrc: bool,
+    },
+
     /// Стартира Vim-а, който програмата може да намери. За тестване
     Vim {
         /// Ако е подадено, няма да се изтегли личното vimrc от сайта
@@ -94,6 +104,8 @@ fn run(args: &Cli) -> anyhow::Result<()> {
 
             println!("Токена ти е активиран, вече можеш да пускаш решения");
         },
+
+        // TODO: Extract some common code to set up Vim, communicate result
         Commands::Put { task_id, novimrc } => {
             let Some(user) = read_user()? else {
                 eprintln!("Не си се активирал на този компютър.");
@@ -132,6 +144,57 @@ fn run(args: &Cli) -> anyhow::Result<()> {
 
             if trimmed_output_lines == task_output_lines {
                 if controller.upload(task_id, log_bytes, &vim.executable, elapsed_time)? {
+                    println!("Супер, решението е качено. Клавишите ти бяха:\n{}", script);
+                } else {
+                    println!("Имаше проблем при качване на решението, пробвай пак.");
+                    println!("Ако не проработи 2-3 пъти, пиши в Discord или по мейл.");
+                }
+            } else {
+                println!("Не се получи, клавишите ти бяха:\n{}", script);
+                println!();
+                println!("Ето ти разликата между твоя опит и очаквания:");
+                println!();
+                print_diff(&task.output, trimmed_output);
+            }
+        },
+        Commands::Free { free_task_id, novimrc } => {
+            let Some(user) = read_user()? else {
+                eprintln!("Не си се активирал на този компютър.");
+                eprintln!("Иди в сайта (https://vim-fmi.bg/user_tokens), създай си token и извикай:");
+                eprintln!();
+                eprintln!("  vim-fmi setup <token>");
+                eprintln!();
+                process::exit(1);
+            };
+
+            let mut controller = Controller::new(host)?;
+            let task = controller.download_free_task(free_task_id)?;
+
+            if !novimrc {
+                if let Err(e) = controller.download_vimrc(&user.token) {
+                    eprintln!("Имаше проблем с изтеглянето на твоето vimrc, използваме стандартното: {e}");
+                }
+            }
+
+            let input_filename = format!("input.{}", task.file_extension.unwrap_or(String::from("txt")));
+            let input_path = controller.create_file(&input_filename, &task.input)?;
+            let log_path = controller.create_file("log", "")?;
+            let vimrc_path = controller.vimrc_path();
+            let vim = Vim::new(vimrc_path)?;
+
+            let start_time = Instant::now();
+            let (output, log_bytes) = vim.run(&input_path, &log_path)?;
+            let elapsed_time = start_time.elapsed().as_millis();
+
+            let keylog = Keylog::new(&log_bytes);
+            let script: String = keylog.into_iter().collect();
+
+            let trimmed_output = output.trim();
+            let trimmed_output_lines = normalized_lines(trimmed_output);
+            let task_output_lines = normalized_lines(&task.output);
+
+            if trimmed_output_lines == task_output_lines {
+                if controller.upload_free_task(free_task_id, log_bytes, &vim.executable, elapsed_time)? {
                     println!("Супер, решението е качено. Клавишите ти бяха:\n{}", script);
                 } else {
                     println!("Имаше проблем при качване на решението, пробвай пак.");

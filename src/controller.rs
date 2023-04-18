@@ -71,6 +71,20 @@ impl Controller {
         }
     }
 
+    pub fn download_free_task(&self, free_task_id: &str) -> ::anyhow::Result<Task> {
+        let path = format!("/api/free_task/{}.json", free_task_id);
+        let endpoint = self.host.join(&path)?;
+        let response = reqwest::blocking::get(endpoint)?;
+
+        if response.status() == 200 {
+            let exercise = response.json()?;
+            Ok(exercise)
+        } else {
+            let error: JsonError = response.json()?;
+            Err(anyhow!("{}", error.message))
+        }
+    }
+
     pub fn download_vimrc(&mut self, user_token: &str) -> ::anyhow::Result<()> {
         let path = format!("/api/vimrc/{}.json", user_token);
         let endpoint = self.host.join(&path)?;
@@ -121,6 +135,40 @@ impl Controller {
         let body = serde_urlencoded::to_string([
             ("entry", ::base64::engine::general_purpose::STANDARD.encode(bytes)),
             ("challenge_id", task_id.to_owned()),
+            ("vimrc_revision_id", vimrc_revision_id),
+            ("user_token", user.token),
+            ("meta", meta.to_string()),
+        ])?;
+        let response = client.post(endpoint).body(body).send()?;
+
+        if response.status().is_success() {
+            Ok(true)
+        } else {
+            let error: JsonError = response.json()?;
+            Err(anyhow!("{}", error.message))
+        }
+    }
+
+    pub fn upload_free_task(
+        &self,
+        free_task_id: &str,
+        bytes: Vec<u8>,
+        vim_executable: &str,
+        elapsed_time: u128,
+    ) -> ::anyhow::Result<bool> {
+        let endpoint = self.host.join("/api/free_task_solution.json")?;
+        let client = reqwest::blocking::Client::new();
+        let meta = get_meta(Some(vim_executable), Some(elapsed_time));
+        // Unwrap: We should have checked for a user before
+        let user = read_user()?.unwrap();
+
+        let vimrc_revision_id = self.vimrc_revision_id.
+            map(|id| id.to_string()).
+            unwrap_or_else(String::new);
+
+        let body = serde_urlencoded::to_string([
+            ("entry", ::base64::engine::general_purpose::STANDARD.encode(bytes)),
+            ("challenge_id", free_task_id.to_owned()),
             ("vimrc_revision_id", vimrc_revision_id),
             ("user_token", user.token),
             ("meta", meta.to_string()),
